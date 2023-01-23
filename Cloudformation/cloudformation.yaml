@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Lambda
+Resources:
+    # IAM
+    LambdaExecutionRole:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: !Sub ${AWS::StackName}-LambdaExecutionRole
+            AssumeRolePolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                    - Effect: Allow
+                      Principal:
+                          Service:
+                              - lambda.amazonaws.com
+                      Action:
+                          - sts:AssumeRole
+            Policies:
+                - PolicyName: Policy
+                  PolicyDocument:
+                      Version: '2012-10-17'
+                      Statement:
+                          - Effect: Allow
+                            Action: states:*
+                            Resource: '*'
+            ManagedPolicyArns:
+                - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+    # Lambda functions
+    LambdaApiHandler:
+        Type: AWS::Serverless::Function
+        Properties:
+            Architectures:
+                - arm64
+            FunctionName: !Sub ${AWS::StackName}-ApiHandler
+            Description: API Handler for moisture sensor backend
+            Handler: index.handler
+            Runtime: nodejs18.x
+            Role: !GetAtt LambdaExecutionRole.Arn
+            MemorySize: 256
+            Timeout: 5
+            ReservedConcurrentExecutions: 10
+            CodeUri: ../Lambda/ApiHandler
+            FunctionUrlConfig:
+                AuthType: NONE
+
+Outputs:
+    LambdaApiHandler:
+        Value: !GetAtt LambdaApiHandler.Arn
+        Description: You can refer to any resource from the template
+    LambdaApiHandlerFunctionUrl:
+        Value: !GetAtt LambdaApiHandlerUrl.FunctionUrl
+        Description: Function URL
