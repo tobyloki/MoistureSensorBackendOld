@@ -26,6 +26,38 @@ Resources:
                             Resource: '*'
             ManagedPolicyArns:
                 - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    StateMachineRole:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: !Sub ${AWS::StackName}-StateMachineRole
+            AssumeRolePolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                    - Effect: Allow
+                      Principal:
+                          Service:
+                              - states.amazonaws.com
+                      Action:
+                          - sts:AssumeRole
+            Policies:
+                - PolicyName: Policy
+                  PolicyDocument:
+                      Version: '2012-10-17'
+                      Statement:
+                          - Effect: Allow
+                            Action:
+                                - logs:CreateLogDelivery
+                                - logs:GetLogDelivery
+                                - logs:UpdateLogDelivery
+                                - logs:DeleteLogDelivery
+                                - logs:ListLogDeliveries
+                                - logs:PutResourcePolicy
+                                - logs:DescribeResourcePolicies
+                                - logs:DescribeLogGroups
+                            Resource: '*'
+                          - Effect: Allow
+                            Action: lambda:InvokeFunction
+                            Resource: '*'
 
     # Lambda functions
     LambdaApiHandler:
@@ -40,15 +72,67 @@ Resources:
             Role: !GetAtt LambdaExecutionRole.Arn
             MemorySize: 256
             Timeout: 5
-            ReservedConcurrentExecutions: 10
+            ReservedConcurrentExecutions: 5
             CodeUri: ../Lambda/ApiHandler
             FunctionUrlConfig:
                 AuthType: NONE
+    LambdaResetActuator:
+        Type: AWS::Serverless::Function
+        Properties:
+            Architectures:
+                - arm64
+            FunctionName: !Sub ${AWS::StackName}-ResetActuator
+            Description: Resets actuators to original state
+            Handler: index.handler
+            Runtime: nodejs18.x
+            Role: !GetAtt LambdaExecutionRole.Arn
+            MemorySize: 256
+            Timeout: 5
+            ReservedConcurrentExecutions: 5
+            CodeUri: ../Lambda/ResetActuator
+
+    # Step function log group
+    ResetActuatorStateMachineLogGroup:
+        Type: AWS::Logs::LogGroup
+        Properties:
+            LogGroupName: !Sub /aws/vendedlogs/states/${AWS::StackName}-ResetActuator
+
+    # State machines
+    ResetActuatorStateMachine:
+        Type: AWS::Serverless::StateMachine
+        Properties:
+            Name: !Sub ${AWS::StackName}-ResetActuator
+            Definition:
+                StartAt: Wait
+                States:
+                    Wait:
+                        Type: Wait
+                        Next: Lambda Invoke
+                        TimestampPath: '$.timestamp'
+                    Lambda Invoke:
+                        Type: Task
+                        Resource: arn:aws:states:::lambda:invoke
+                        OutputPath: '$.Payload'
+                        Parameters:
+                            Payload.$: '$'
+                            FunctionName: !GetAtt LambdaResetActuator.Arn
+                        Retry:
+                            - ErrorEquals:
+                                  - States.ALL
+                              IntervalSeconds: 5
+                              MaxAttempts: 3
+                              BackoffRate: 2
+                        End: true
+            Logging:
+                Level: ALL
+                IncludeExecutionData: true
+                Destinations:
+                    - CloudWatchLogsLogGroup:
+                          LogGroupArn: !GetAtt ResetActuatorStateMachineLogGroup.Arn
+            Role: !GetAtt StateMachineRole.Arn
+            Type: STANDARD
 
 Outputs:
-    LambdaApiHandler:
-        Value: !GetAtt LambdaApiHandler.Arn
-        Description: You can refer to any resource from the template
     LambdaApiHandlerFunctionUrl:
         Value: !GetAtt LambdaApiHandlerUrl.FunctionUrl
         Description: Function URL
