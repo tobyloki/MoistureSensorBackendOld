@@ -1,0 +1,24 @@
+{
+    "eventTime": 1674595670479,
+    "payload": {
+        "actionExecutionId": "6ea7ea2a-363f-3c35-bc2c-16e08351562a",
+        "detector": {
+            "detectorModelName": "MoistureSensorModel",
+            "keyValue": "MoistureSensor",
+            "detectorModelVersion": "5"
+        },
+        "eventTriggerDetails": {
+            "inputName": "MoistureSensorInput",
+            "messageId": "14b88671-f391-4c6a-9d92-0512487deb7d",
+            "triggerType": "Message"
+        },
+        "state": {
+            "stateName": "Hot",
+            "variables": {
+                "criticalCounter": 3
+            },
+            "timers": {}
+        }
+    },
+    "eventName": "LambdaTrigger"
+}

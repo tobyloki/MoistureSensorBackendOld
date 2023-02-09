@@ -24,6 +24,12 @@ Resources:
                           - Effect: Allow
                             Action: states:*
                             Resource: '*'
+                          - Effect: Allow
+                            Action: iot:*
+                            Resource: '*'
+                          - Effect: Allow
+                            Action: sns:*
+                            Resource: '*'
             ManagedPolicyArns:
                 - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
     StateMachineRole:
@@ -68,7 +74,7 @@ Resources:
             FunctionName: !Sub ${AWS::StackName}-ApiHandler
             Description: API Handler for moisture sensor backend
             Handler: index.handler
-            Runtime: nodejs18.x
+            Runtime: nodejs16.x
             Role: !GetAtt LambdaExecutionRole.Arn
             MemorySize: 256
             Timeout: 5
@@ -84,12 +90,28 @@ Resources:
             FunctionName: !Sub ${AWS::StackName}-ResetActuator
             Description: Resets actuators to original state
             Handler: index.handler
-            Runtime: nodejs18.x
+            Runtime: nodejs16.x
             Role: !GetAtt LambdaExecutionRole.Arn
             MemorySize: 256
             Timeout: 5
             ReservedConcurrentExecutions: 5
             CodeUri: ../Lambda/ResetActuator
+    LambdaIoTReport:
+        Type: AWS::Serverless::Function
+        Properties:
+            Architectures:
+                - arm64
+            FunctionName: !Sub ${AWS::StackName}-IoTReport
+            Description: IoT moisture sensors can't report data to this endpoint
+            Handler: index.handler
+            Runtime: nodejs16.x
+            Role: !GetAtt LambdaExecutionRole.Arn
+            MemorySize: 256
+            Timeout: 5
+            ReservedConcurrentExecutions: 5
+            CodeUri: ../Lambda/IoTReport
+            FunctionUrlConfig:
+                AuthType: NONE
 
     # Step function log group
     ResetActuatorStateMachineLogGroup:
@@ -135,4 +157,7 @@ Resources:
 Outputs:
     LambdaApiHandlerFunctionUrl:
         Value: !GetAtt LambdaApiHandlerUrl.FunctionUrl
+        Description: Function URL
+    LambdaIoTReportFunctionUrl:
+        Value: !GetAtt LambdaIoTReportUrl.FunctionUrl
         Description: Function URL

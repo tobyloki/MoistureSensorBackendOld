@@ -1,0 +1,1 @@
+{"timestamp":1674532978249,"topic":"$aws/things/MoistureSensor/shadow/update/accepted","state":{"desired":{"welcome":"aws-iot"},"reported":{"welcome":"aws-iot","temperature":55}}}

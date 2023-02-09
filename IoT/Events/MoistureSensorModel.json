@@ -1,0 +1,126 @@
+{
+    "detectorModelDefinition": {
+        "states": [
+            {
+                "stateName": "Normal",
+                "onInput": {
+                    "events": [
+                        {
+                            "eventName": "IncrementCounter",
+                            "condition": "$input.MoistureSensorInput.state.reported.temperature >= 80",
+                            "actions": [
+                                {
+                                    "setVariable": {
+                                        "variableName": "criticalCounter",
+                                        "value": "$variable.criticalCounter + 1"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "eventName": "ResetCounter",
+                            "condition": "$input.MoistureSensorInput.state.reported.temperature < 80",
+                            "actions": [
+                                {
+                                    "setVariable": {
+                                        "variableName": "criticalCounter",
+                                        "value": "0"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "transitionEvents": [
+                        {
+                            "eventName": "Critical",
+                            "condition": "$variable.criticalCounter > 2",
+                            "actions": [],
+                            "nextState": "Hot"
+                        }
+                    ]
+                },
+                "onEnter": {
+                    "events": [
+                        {
+                            "eventName": "Initialize",
+                            "condition": "true",
+                            "actions": [
+                                {
+                                    "setVariable": {
+                                        "variableName": "criticalCounter",
+                                        "value": "0"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "eventName": "LambdaTrigger",
+                            "condition": "true",
+                            "actions": [
+                                {
+                                    "lambda": {
+                                        "functionArn": "arn:aws:lambda:us-west-2:978103014270:function:MoistureSensor-ResetActuator"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "onExit": {
+                    "events": []
+                }
+            },
+            {
+                "stateName": "Hot",
+                "onInput": {
+                    "events": [
+                        {
+                            "eventName": "DecrementCounter",
+                            "condition": "$input.MoistureSensorInput.state.reported.temperature < 80",
+                            "actions": [
+                                {
+                                    "setVariable": {
+                                        "variableName": "criticalCounter",
+                                        "value": "$variable.criticalCounter - 1"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "transitionEvents": [
+                        {
+                            "eventName": "OK",
+                            "condition": "$variable.criticalCounter == 0",
+                            "actions": [],
+                            "nextState": "Normal"
+                        }
+                    ]
+                },
+                "onEnter": {
+                    "events": [
+                        {
+                            "eventName": "LambdaTrigger",
+                            "condition": "true",
+                            "actions": [
+                                {
+                                    "lambda": {
+                                        "functionArn": "arn:aws:lambda:us-west-2:978103014270:function:MoistureSensor-ResetActuator"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "onExit": {
+                    "events": []
+                }
+            }
+        ],
+        "initialStateName": "Normal"
+    },
+    "detectorModelDescription": null,
+    "detectorModelName": "MoistureSensorModel",
+    "evaluationMethod": "SERIAL",
+    "key": "deviceId",
+    "roleArn": "arn:aws:iam::978103014270:role/service-role/AWS_IoTEvents_HelloWorld_ActionRole"
+}
